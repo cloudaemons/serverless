@@ -1,0 +1,14 @@
+{
+  "name": "analytics",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "author": "",
+  "scripts": {},
+  "devDependencies": {
+    "aws-sdk": "^2.757.0"
+  },
+  "dependencies": {
+    "moment": "^2.29.1"
+  }
+}

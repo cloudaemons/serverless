@@ -1,0 +1,25 @@
+{
+  "name": "sqs-to-api",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "author": "",
+  "scripts": {
+    "test": "jest",
+    "lint": "standard"
+  },
+  "devDependencies": {
+    "aws-sdk": "^2.757.0",
+    "jest": "^26.4.2",
+    "standard": "14.3.4"
+  },
+  "standard": {
+    "ignore": [],
+    "env": [
+      "jest"
+    ]
+  },
+  "dependencies": {
+    "axios": "^0.20.0"
+  }
+}

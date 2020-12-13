@@ -1,0 +1,32 @@
+openapi: "3.0.1"
+info:
+  title: ${api_name}
+  version: "2020-11-27T12:18:31Z"
+
+x-amazon-apigateway-policy:
+  Version: "2012-10-17"
+  Statement:
+    - Effect: Allow
+      Principal: "*"
+      Action:
+        - execute-api:Invoke
+      Resource: "*"
+
+paths:
+  /{proxy+}:
+    get:
+      security:
+      - api_key: []
+      x-amazon-apigateway-integration:
+        uri: "arn:aws:apigateway:${region}:lambda:path/2015-03-31/functions/${index}/invocations"
+        passthroughBehavior: "when_no_match"
+        httpMethod: "POST"
+        timeoutInMillis: ${timeout}
+        type: "aws_proxy"
+          
+components:
+  securitySchemes:
+    api_key:
+      type: "apiKey"
+      name: "x-api-key"
+      in: "header"

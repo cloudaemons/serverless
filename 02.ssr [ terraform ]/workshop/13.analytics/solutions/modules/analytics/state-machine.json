@@ -1,0 +1,52 @@
+{
+  "StartAt": "StartQuery",
+  "States": {
+    "StartQuery": {
+      "Type": "Task",
+      "Resource": "${StartQueryExecution}",
+      "Next": "GetQueryStatus"
+    },
+    "GetQueryStatus": {
+      "Type": "Task",
+      "Resource": "${CheckQueryExecution}",
+      "Next": "CheckQueryStatus"
+    },
+    "CheckQueryStatus": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.state",
+          "StringEquals": "SUCCEEDED",
+          "Next": "SendReport"
+        },
+        {
+          "Variable": "$.state",
+          "StringEquals": "QUEUED",
+          "Next": "Wait"
+        },
+        {
+          "Variable": "$.state",
+          "StringEquals": "RUNNING",
+          "Next": "Wait"
+        }
+      ],
+      "Default": "Failed"
+    },
+    "Wait": {
+      "Type": "Wait",
+      "Seconds": 30,
+      "Next": "GetQueryStatus"
+    },
+    "Failed": {
+      "Type": "Fail"
+    },
+    "SendReport": {
+      "Type": "Task",
+      "Resource": "${SendReport}",
+      "Next": "Done"
+    },
+    "Done": {
+      "Type": "Succeed"
+    }
+  }
+}
