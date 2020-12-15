@@ -1,0 +1,34 @@
+AWSTemplateFormatVersion: 2010-09-09
+Transform: AWS::Serverless-2016-10-31
+Description: Image Processor
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: image-processor
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - test
+      - prod
+
+Globals:
+  Function:
+    Runtime: nodejs10.x
+    MemorySize: 512
+    Tracing: Active
+    Tags:
+      PROJECT: !Ref ProjectName
+      STAGE: !Ref Environment
+    Environment:
+      Variables:
+        ENVIRONMENT: !Ref Environment
+    AutoPublishAlias: live
+    DeploymentPreference:
+      Type: AllAtOnce
+
+Resources:
+  ImageProcessorS3Bucket:
+    Type: AWS::S3::Bucket

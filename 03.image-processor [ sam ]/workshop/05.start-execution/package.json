@@ -1,0 +1,37 @@
+{
+  "name": "image-processor",
+  "version": "1.0.0",
+  "description": "Image processor",
+  "main": "index.js",
+  "scripts": {
+    "test": "ava",
+    "test:coverage": "nyc --reporter=html --reporter=text-summary ava",
+    "check-coverage": "nyc check-coverage"
+  },
+  "author": "Arkadiusz Bajowski",
+  "license": "MIT",
+  "repository": "https://github.com/abajowski",
+  "dependencies": {
+    "lodash": "^4.17.15",
+    "sharp": "^0.23.3"
+  },
+  "devDependencies": {
+    "ava": "^2.4.0",
+    "aws-sdk": "^2.532.0",
+    "eslint": "^5.16.0",
+    "eslint-config-standard": "^12.0.0",
+    "eslint-plugin-ava": "^7.0.0",
+    "eslint-plugin-import": "^2.17.3",
+    "eslint-plugin-node": "^9.2.0",
+    "eslint-plugin-promise": "^4.1.1",
+    "eslint-plugin-standard": "^4.0.0",
+    "nyc": "^14.1.1",
+    "sinon": "^7.4.2"
+  },
+  "nyc": {
+    "branches": 70,
+    "lines": 70,
+    "functions": 70,
+    "statements": 70
+  }
+}

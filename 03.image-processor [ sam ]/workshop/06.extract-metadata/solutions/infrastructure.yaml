@@ -1,0 +1,194 @@
+AWSTemplateFormatVersion: 2010-09-09
+Transform: AWS::Serverless-2016-10-31
+Description: Image Processor
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: image-processor
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - test
+      - prod
+
+Globals:
+  Function:
+    Runtime: nodejs10.x
+    MemorySize: 512
+    Tracing: Active
+    Tags:
+      PROJECT: !Ref ProjectName
+      STAGE: !Ref Environment
+    Environment:
+      Variables:
+        ENVIRONMENT: !Ref Environment
+    AutoPublishAlias: live
+    DeploymentPreference:
+      Type: AllAtOnce
+
+Resources:
+  ImageProcessorS3Bucket:
+    Type: AWS::S3::Bucket
+
+  ImageMetadataDB:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+
+  StateMachineRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              Service:
+                !Sub states.${AWS::Region}.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        -
+          PolicyName: InvokeLambda
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              -
+                Sid: InvokeLambda
+                Effect: Allow
+                Action:
+                  - lambda:InvokeFunction
+                Resource: '*'
+                
+  StateMachine:
+    Type: AWS::StepFunctions::StateMachine
+    Properties:
+      RoleArn: !GetAtt StateMachineRole.Arn
+      DefinitionString:
+        !Sub
+          - |-
+            {
+              "Comment": "Image Processing workflow",
+              "StartAt": "Extract Image Metadata",
+              "States": {
+                "Extract Image Metadata": {
+                  "Type": "Task",
+                  "Resource": "${ExtractMetadataFunction}",
+                  "InputPath": "$",
+                  "ResultPath": "$.extractedMetadata",
+                  "Next": "Check Image Type",
+                  "Catch": [
+                    {
+                      "ErrorEquals": [
+                        "ImageIdentifyError"
+                      ],
+                      "Next": "Not Supported Type"
+                    }
+                  ],
+                  "Retry": [
+                    {
+                      "ErrorEquals": [
+                        "ImageIdentifyError"
+                      ],
+                      "MaxAttempts": 0
+                    },
+                    {
+                      "ErrorEquals": [
+                        "States.ALL"
+                      ],
+                      "IntervalSeconds": 1,
+                      "MaxAttempts": 2
+                    }
+                  ]
+                },
+                "Check Image Type": {
+                  "Type": "Choice",
+                  "Choices": [
+                    {
+                      "Or": [
+                        {
+                          "Variable": "$.extractedMetadata.format",
+                          "StringEquals": "jpeg"
+                        },
+                        {
+                          "Variable": "$.extractedMetadata.format",
+                          "StringEquals": "png"
+                        }
+                      ],
+                      "Next": "Pass"
+                    }
+                  ],
+                  "Default": "Not Supported Type"
+                },
+                "Not Supported Type": {
+                  "Type": "Fail",
+                  "Cause": "Image type not supported!",
+                  "Error": "FileTypeNotSupported"
+                },
+                "Pass": {
+                  "Type": "Pass",
+                  "End": true
+                }
+              }
+            }
+          - {
+              ExtractMetadataFunction: !GetAtt ExtractMetadataFunction.Arn
+            }
+
+  ExtractMetadataFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: ./src/functions/extract-metadata.handler
+      Policies:
+        - Version: 2012-10-17
+          Statement:
+            - Effect: Allow
+              Action:
+                - s3:Get*
+                - s3:List*
+              Resource: '*'
+
+  StartExecutionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: ./src/functions/start-execution.handler
+      Environment:
+        Variables:
+          STATE_MACHINE_ARN: !Ref StateMachine
+      Policies:
+        - Version: 2012-10-17
+          Statement:
+            - Effect: Allow
+              Action:
+                - s3:Get*
+                - s3:List*
+              Resource: '*'
+        - Version: 2012-10-17
+          Statement:
+            - Effect: Allow
+              Action:
+                - states:DescribeExecution
+                - states:GetExecutionHistory
+                - states:ListExecutions
+                - states:StartExecution
+                - states:StopExecution
+              Resource:
+                - !Ref StateMachine
+      Events:
+        BucketImageProcessorS3Bucket:
+          Type: S3
+          Properties:
+            Bucket: !Ref ImageProcessorS3Bucket
+            Events: s3:ObjectCreated:*

@@ -1,0 +1,46 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Image Processor
+Globals:
+  Function:
+    AutoPublishAlias: live
+    DeploymentPreference:
+      Type: AllAtOnce
+    Environment:
+      Variables:
+        ENVIRONMENT:
+          Ref: Environment
+    MemorySize: 512
+    Runtime: nodejs10.x
+    Tags:
+      PROJECT:
+        Ref: ProjectName
+      STAGE:
+        Ref: Environment
+    Tracing: Active
+Parameters:
+  Environment:
+    AllowedValues:
+    - dev
+    - test
+    - prod
+    Default: dev
+    Type: String
+  ProjectName:
+    Default: image-processor
+    Type: String
+Resources:
+  ImageMetadataDB:
+    Properties:
+      AttributeDefinitions:
+      - AttributeName: id
+        AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+      - AttributeName: id
+        KeyType: HASH
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+    Type: AWS::DynamoDB::Table
+  ImageProcessorS3Bucket:
+    Type: AWS::S3::Bucket
+Transform: AWS::Serverless-2016-10-31

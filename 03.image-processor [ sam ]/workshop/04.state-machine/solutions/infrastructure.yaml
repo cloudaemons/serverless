@@ -1,0 +1,98 @@
+AWSTemplateFormatVersion: 2010-09-09
+Transform: AWS::Serverless-2016-10-31
+Description: Image Processor
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: image-processor
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - test
+      - prod
+
+Globals:
+  Function:
+    Runtime: nodejs10.x
+    MemorySize: 512
+    Tracing: Active
+    Tags:
+      PROJECT: !Ref ProjectName
+      STAGE: !Ref Environment
+    Environment:
+      Variables:
+        ENVIRONMENT: !Ref Environment
+    AutoPublishAlias: live
+    DeploymentPreference:
+      Type: AllAtOnce
+
+Resources:
+  ImageProcessorS3Bucket:
+    Type: AWS::S3::Bucket
+
+  ImageMetadataDB:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+
+  StateMachineRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              Service:
+                !Sub states.${AWS::Region}.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        -
+          PolicyName: InvokeLambda
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              -
+                Sid: InvokeLambda
+                Effect: Allow
+                Action:
+                  - lambda:InvokeFunction
+                Resource: '*'
+                
+  StateMachine:
+    Type: AWS::StepFunctions::StateMachine
+    Properties:
+      RoleArn: !GetAtt StateMachineRole.Arn
+      DefinitionString:
+        !Sub
+          - |-
+            {
+              "Comment": "A Hello World example of the Amazon States Language using Pass states",
+              "StartAt": "Hello",
+              "States": {
+                "Hello": {
+                  "Type": "Pass",
+                  "Result": "Hello",
+                  "Next": "World"
+                },
+                "World": {
+                  "Type": "Pass",
+                  "Result": "World",
+                  "End": true
+                }
+              }
+            }
+          - {}

@@ -1,0 +1,16 @@
+{
+  "name": "serverless-chat",
+  "version": "1.0.0",
+  "description": "Serverless chat",
+  "main": "index.js",
+  "author": "Arkadiusz Bajowski",
+  "license": "MIT",
+  "repository": "https://github.com/abajowski",
+  "dependencies": {
+    "lodash": "^4.17.15",
+    "sharp": "^0.23.3"
+  },
+  "devDependencies": {
+    "aws-sdk": "^2.532.0"
+  }
+}
